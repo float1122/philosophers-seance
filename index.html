@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Philosophers' Séance</title>
+  <meta name="description" content="Light the candles, place your hand on the planchette, and ask a long-dead philosopher what troubles you.">
+  <meta name="color-scheme" content="dark">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22%3E%3Cellipse cx=%2216%22 cy=%2214%22 rx=%2210%22 ry=%2212%22 fill=%22%23e9cf98%22/%3E%3Ccircle cx=%2216%22 cy=%2212%22 r=%224%22 fill=%22%232b170d%22/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Cinzel+Decorative:wght@700&family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script type="module" src="src/main.js"></script>
+</head>
+<body>
+  <div class="smoke" aria-hidden="true"></div>
+
+  <header class="masthead">
+    <p class="masthead__eyebrow">A séance for restless minds</p>
+    <h1 class="masthead__title">Philosophers' <span>Séance</span></h1>
+    <p class="masthead__lede">Light the candles. Choose a spirit. Whisper what keeps you awake.</p>
+  </header>
+
+  <main class="seance">
+    <section class="altar" aria-label="The spirit board">
+      <div class="candle candle--left" aria-hidden="true"><span class="candle__flame"></span><span class="candle__wax"></span></div>
+      <div class="board" id="board"></div>
+      <div class="candle candle--right" aria-hidden="true"><span class="candle__flame"></span><span class="candle__wax"></span></div>
+      <div class="candle candle--small" aria-hidden="true"><span class="candle__flame"></span><span class="candle__wax"></span></div>
+    </section>
+
+    <section class="ritual" aria-labelledby="ritual-title">
+      <h2 class="ritual__title" id="ritual-title"><span class="ritual__mark">I</span> Choose a spirit</h2>
+      <ul class="picker" id="picker"></ul>
+
+      <form class="ask" id="ask" novalidate>
+        <label class="ritual__title" for="worry"><span class="ritual__mark">II</span> Whisper your worry</label>
+        <textarea id="worry" name="worry" rows="4" placeholder="First, choose a spirit to listen…" disabled aria-describedby="worry-count"></textarea>
+        <div class="ask__row">
+          <p class="ask__count" id="worry-count" aria-live="off"></p>
+          <button class="summon" id="summon" type="submit" disabled>Summon the spirit</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="answer" id="answer" aria-labelledby="answer-title" hidden>
+      <h2 class="answer__title" id="answer-title">The spirit speaks</h2>
+      <p class="answer__waiting" id="waiting" hidden>The candles gutter. Something stirs beyond the veil…</p>
+      <p class="answer__text" id="answer-visible" aria-hidden="true"></p>
+      <p class="answer__sign" id="answer-sign" aria-hidden="true"></p>
+      <div class="sr-only" id="answer-live" aria-live="polite"></div>
+    </section>
+  </main>
+
+  <footer class="disclaimer" id="disclaimer">
+    A séance of the imagination. It does not contact the dead or predict the future, and it is not medical, legal, financial, or therapeutic advice.
+  </footer>
+</body>
+</html>
