@@ -1,0 +1,17 @@
+# Dependencies
+node_modules/
+
+# Secrets — never commit environment variables or API keys
+.env
+.env.*
+.env.local
+.env.*.local
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
