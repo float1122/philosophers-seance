@@ -1,0 +1,15 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "run-tests-on-save",
+      "description": "Run npm test when a .js file under src/, api/, or tests/ is saved or edited by the agent",
+      "trigger": "PostFileSave",
+      "matcher": "(^|/)(src|api|tests)/.*\\.js$",
+      "action": {
+        "type": "command",
+        "command": "npm test"
+      }
+    }
+  ]
+}
