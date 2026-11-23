@@ -45,6 +45,7 @@ Then open `http://127.0.0.1:3000`. `serve.mjs` is a development server only. Wit
 
 - The daily counter never passes `DAILY_CALL_LIMIT`: D1 checks and increments it atomically in one statement (`INSERT ... ON CONFLICT(day) DO UPDATE SET n = n + 1 WHERE n < ? RETURNING n`), so simultaneous requests cannot both take the last call.
 - Each IP gets at most 30 calls per UTC day, checked before the global cap so one client cannot use it all up. The IP comes from `CF-Connecting-IP` and is stored only as `SHA-256(day:ip:IP_HASH_SALT)` in D1 (`migrations/0002_ip_usage.sql`); other days' rows are deleted on each call, and the count uses the same atomic upsert. A missing header or salt refuses the call; over the cap returns the same `429 SPIRITS_RESTING`. (Added after the Kiro quota ran out, together with Claude, an AI coding assistant.)
+- Addresses are normalized before hashing: IPv4 and IPv4-mapped IPv6 (`::ffff:a.b.c.d`) count per full address, IPv6 counts per /64 prefix (expanded, lowercased, first four groups), so rotating addresses inside one /64 shares one counter. An address that cannot be parsed is refused.
 - A spend limit is also set on the Anthropic side, as a second cap independent of this counter.
 
 ## How Kiro was used

@@ -4,7 +4,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import fc from "fast-check";
 import handler, { createHandler } from "../api/seance.js";
-import { D1IpUsageStore, IP_DAILY_LIMIT, hashIp, ipStoreFromEnv } from "../api/ip-store.js";
+import { D1IpUsageStore, IP_DAILY_LIMIT, hashIp, ipStoreFromEnv, normalizeIp } from "../api/ip-store.js";
 import { D1UsageStore } from "../api/d1-store.js";
 import { fakeD1 } from "./helpers/fake-d1.js";
 
@@ -192,4 +192,57 @@ test("IPv6 addresses work too and stay out of the database", async (t) => {
   const ip = "2001:db8::1";
   assert.equal((await handler(req(ip), env(db))).status, 200);
   assert.ok(!db.dump().includes(ip));
+});
+
+// IPv6: one person can rotate addresses inside a /64, so IPv6 is counted by
+// its /64 prefix. IPv4 (and IPv4-mapped IPv6) is counted by the full address.
+async function countAfter(ips, limit = 2) {
+  const store = new D1IpUsageStore({ db: fakeD1(), salt: SALT });
+  const out = [];
+  for (const ip of ips) out.push(await store.tryConsume(DAY, ip, limit));
+  return out;
+}
+
+test("addresses in the same IPv6 /64 share one counter", async () => {
+  assert.deepEqual(
+    await countAfter(["2001:db8:1:2::1", "2001:db8:1:2:aaaa:bbbb:cccc:dddd", "2001:db8:1:2::ffff"]),
+    [true, true, false]
+  );
+});
+
+test("different IPv6 /64 prefixes are counted separately", async () => {
+  assert.deepEqual(
+    await countAfter(["2001:db8:1:2::1", "2001:db8:1:2::2", "2001:db8:1:3::1", "2001:db8:1:3::2"]),
+    [true, true, true, true]
+  );
+});
+
+test("the same IPv6 address in different notations counts as one", async () => {
+  assert.deepEqual(
+    await countAfter(["2001:DB8:0:0:0:0:0:1", "2001:db8::1", "2001:0db8:0000:0000:0000:0000:0000:0001"]),
+    [true, true, false]
+  );
+});
+
+test("IPv4-mapped IPv6 counts the same as the IPv4 address", async () => {
+  assert.deepEqual(await countAfter(["203.0.113.7", "::ffff:203.0.113.7", "::FFFF:cb00:7107"]), [true, true, false]);
+  assert.deepEqual(await countAfter(["203.0.113.7", "203.0.113.8"], 1), [true, true]);
+});
+
+test("normalizeIp keeps full IPv4 and the IPv6 /64 prefix", () => {
+  assert.equal(normalizeIp("203.0.113.7"), "203.0.113.7");
+  assert.equal(normalizeIp("::ffff:203.0.113.7"), "203.0.113.7");
+  assert.equal(normalizeIp("::ffff:cb00:7107"), "203.0.113.7");
+  assert.equal(normalizeIp("2001:DB8::1"), "2001:0db8:0000:0000::/64");
+  assert.equal(normalizeIp("2001:db8:1:2:3:4:5:6"), "2001:0db8:0001:0002::/64");
+  assert.equal(normalizeIp("::1"), "0000:0000:0000:0000::/64");
+  for (const bad of ["", "not-an-ip", "1.2.3", "300.1.1.1", "1::2::3", "2001:db8:1:2:3:4:5:6:7", "12345::1"]) {
+    assert.equal(normalizeIp(bad), null, bad);
+  }
+});
+
+test("an address that cannot be parsed is refused", async (t) => {
+  const modelCalls = stubModel(t);
+  await expectResting(await handler(req("not-an-ip"), env(fakeD1())));
+  assert.equal(modelCalls(), 0);
 });
