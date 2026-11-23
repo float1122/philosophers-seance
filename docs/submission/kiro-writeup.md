@@ -63,19 +63,19 @@ The correctness properties from the spec are tested with `fast-check` (a dev-onl
 
 We want to be straightforward about this part. Kiro generated the steering, the hook, the requirements, the design and the task list. It then executed the first task (project setup and dependencies) and wrote the first batch of test files: limit parsing, the usage store, validation, the system prompt and response shaping. At that point **the free-tier monthly Kiro credits ran out**, partway through implementation.
 
-The rest of the plan was completed **outside Kiro, by hand, following `tasks.md` in order** and keeping the same discipline: for each task the test was written first, `npm test` was red before the implementation and green after. The git history shows the split: the Kiro spec commit, then a commit of the failing back-end tests from the Kiro tasks, then the implementation commits.
+After our Kiro free-tier quota ran out, **we finished the remaining tasks in `tasks.md` order together with Claude, an AI coding assistant.** We kept the same discipline: for each task the test was written first, `npm test` was red before the implementation and green after. The git history shows the split: the Kiro spec commit, then a commit of the failing back-end tests from the Kiro tasks, then the implementation commits.
 
 The task list recorded where the build departed from the plan:
 
 - the candle flicker is pure CSS, so there is no separate candle script;
 - the board, picker, disclaimer and reveal DOM tests are consolidated in one test file.
 
-Two security follow-ups were also done by hand after the credits were gone, and both were written back into the spec instead of patched silently. The design gained a "Revision: durable usage store" section, and the execution log records the changes:
+Two security follow-ups were also done with Claude after the credits were gone, and both were written back into the spec instead of patched silently. The design gained a "Revision: durable usage store" section, and the execution log records the changes:
 
 - A review found that an in-memory counter would let each serverless instance keep its own count, so the daily limit could be bypassed. The handler now refuses any usage store that is missing or not durable, and fails closed if the store errors.
 - A first durable store (Cloudflare KV) used a read-then-write that could let simultaneous requests past the limit. It was replaced with Cloudflare D1 and a single atomic upsert that checks and increments in one statement, tested against a fake D1 backed by real SQLite.
 
-Even without credits, the spec kept paying off. Because the requirements, design and task order were already written, finishing by hand meant working through a plan that already existed, not improvising. When the security review changed the storage design, there was a clear place to record why.
+Even without credits, the spec kept paying off. Because the requirements, design and task order were already written, finishing with Claude meant working through a plan that already existed, not improvising. When the security review changed the storage design, there was a clear place to record why.
 
 ## Summary
 

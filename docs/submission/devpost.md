@@ -62,7 +62,7 @@ The full Kiro story is in our Kiro write-up and in the `/.kiro` folder of the re
 
 ## Challenges we ran into
 
-- **Our Kiro credits ran out mid-build.** Kiro generated the steering, hook, requirements, design and tasks, completed the setup task and wrote the first batch of failing tests. Then the free-tier credits ran out. We finished the rest outside Kiro, by hand, working through `tasks.md` in order and staying test-first. Having the spec already written is what made that possible.
+- **Our Kiro credits ran out mid-build.** Kiro generated the steering, hook, requirements, design and tasks, completed the setup task and wrote the first batch of failing tests. After our Kiro free-tier quota ran out, we finished the remaining tasks in `tasks.md` order together with Claude, an AI coding assistant. We stayed test-first throughout. Having the spec already written is what made that possible.
 - **Keeping a free AI demo safe.** A public demo that calls a paid model has to be impossible to run away with. Our first durable counter could be raced by simultaneous requests, so we moved it to an atomic database upsert. The function now refuses to run at all without a durable store, a valid limit or a key.
 - **Spooky without being cruel.** The spirits had to feel eerie but stay kind, never mocking and never pretending to be a therapist or an oracle. We put that voice in a steering doc so it held across every prompt.
 - **Not putting words in dead mouths.** We wrote every persona ourselves instead of quoting modern translations, which may still be under copyright.
@@ -108,8 +108,8 @@ Each spooky element replaces a plain UI pattern with one that does the same job 
 ## Best Startup Project
 
 **Founder confirmation:** [to be confirmed by the submitting founder]
-**LinkedIn profile:** [founder LinkedIn URL]
-**Startup website:** [FLOAT Co., Ltd. website URL]
+**LinkedIn profile:** (to confirm)
+**Startup website:** https://float.do
 
 **About the startup.** Philosophers' Séance was built by FLOAT Co., Ltd. The séance is a playful, English-language take on a simple need: people who want to think a personal question through with a great thinker's voice instead of a generic assistant.
 
