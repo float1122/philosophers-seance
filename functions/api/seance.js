@@ -1,4 +1,4 @@
-// Cloudflare Pages Function for /api/seance. Needs the SEANCE_USAGE KV
+// Cloudflare Pages Function for /api/seance. Needs the SEANCE_DB D1
 // binding plus ANTHROPIC_API_KEY and DAILY_CALL_LIMIT; without them it
 // refuses every call.
 import handler from "../../api/seance.js";

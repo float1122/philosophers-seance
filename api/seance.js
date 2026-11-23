@@ -4,7 +4,7 @@
 import { parseAndValidate } from "./validate.js";
 import { parseDailyCallLimit } from "./limit.js";
 import { DAY_TTL_SECONDS, utcDayKey } from "./usage-store.js";
-import { usageStoreFromEnv } from "./kv-store.js";
+import { usageStoreFromEnv } from "./d1-store.js";
 import { getPhilosopher } from "./prompt.js";
 import { callAnthropic } from "./anthropic.js";
 import { errorResponse, jsonResponse } from "./response.js";
@@ -59,7 +59,7 @@ export function createHandler({
 }
 
 // Platform entry: (Request, env) => Response. The usage store comes only from
-// the SEANCE_USAGE KV binding; without it every call is refused.
+// the SEANCE_DB D1 binding; without it every call is refused.
 export default async function handler(request, env = globalThis.process?.env ?? {}) {
   return createHandler({ env, store: usageStoreFromEnv(env) })(request);
 }

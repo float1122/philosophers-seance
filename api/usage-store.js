@@ -2,7 +2,7 @@
 //   durable: boolean                     true only for shared, persistent stores
 //   tryConsume(utcDay, limit, ttlSeconds) -> Promise<boolean>
 //     Count one accepted call for utcDay if fewer than `limit` were counted;
-//     the day's counter expires after ttlSeconds.
+//     stores may use ttlSeconds to expire old days (D1 keeps one row per day).
 // The deployed function only accepts durable stores. InMemoryUsageStore is for
 // local development and tests (it is per-process and resets on restart).
 

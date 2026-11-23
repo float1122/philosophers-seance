@@ -1,0 +1,11 @@
+# Example Cloudflare Pages config. Copy to wrangler.toml and fill database_id
+# with the id printed by `wrangler d1 create seance-limits`.
+name = "philosophers-seance"
+pages_build_output_dir = "."
+compatibility_date = "2026-11-01"
+
+[[d1_databases]]
+binding = "SEANCE_DB"
+database_name = "seance-limits"
+database_id = ""
+migrations_dir = "migrations"

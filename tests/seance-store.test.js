@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 import fc from "fast-check";
 import handler, { createHandler } from "../api/seance.js";
 import { InMemoryUsageStore, DAY_TTL_SECONDS } from "../api/usage-store.js";
-import { fakeKv } from "./helpers/fake-kv.js";
+import { fakeD1 } from "./helpers/fake-d1.js";
 
 const KEY = "test-placeholder";
 const req = () =>
@@ -134,18 +134,18 @@ test("in-memory tryConsume is atomic under concurrent calls", async () => {
   assert.equal(store.durable, false);
 });
 
-test("default export uses the SEANCE_USAGE KV binding and enforces the limit", async (t) => {
+test("default export uses the SEANCE_DB D1 binding and enforces the limit", async (t) => {
   const originalFetch = globalThis.fetch;
   let modelCalls = 0;
   globalThis.fetch = async () => { modelCalls += 1; return new Response(JSON.stringify({ content: [{ type: "text", text: "Steady." }] })); };
   t.after(() => { globalThis.fetch = originalFetch; });
-  const env = { ANTHROPIC_API_KEY: KEY, DAILY_CALL_LIMIT: "1", SEANCE_USAGE: fakeKv() };
+  const env = { ANTHROPIC_API_KEY: KEY, DAILY_CALL_LIMIT: "1", SEANCE_DB: fakeD1() };
   assert.equal((await handler(req(), env)).status, 200);
   await expectResting(await handler(req(), env));
   assert.equal(modelCalls, 1);
 });
 
-test("Pages Function adapter: no KV binding -> SPIRITS_RESTING", async () => {
+test("Pages Function adapter: no D1 binding -> SPIRITS_RESTING", async () => {
   const { onRequest } = await import("../functions/api/seance.js");
   const res = await onRequest({ request: req(), env: { ANTHROPIC_API_KEY: KEY, DAILY_CALL_LIMIT: "5" } });
   await expectResting(res);
@@ -156,8 +156,8 @@ test("Pages Function adapter: empty limit or limit reached -> SPIRITS_RESTING", 
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async () => new Response(JSON.stringify({ content: [{ type: "text", text: "Breathe." }] }));
   t.after(() => { globalThis.fetch = originalFetch; });
-  await expectResting(await onRequest({ request: req(), env: { ANTHROPIC_API_KEY: KEY, DAILY_CALL_LIMIT: "", SEANCE_USAGE: fakeKv() } }));
-  const env = { ANTHROPIC_API_KEY: KEY, DAILY_CALL_LIMIT: "1", SEANCE_USAGE: fakeKv() };
+  await expectResting(await onRequest({ request: req(), env: { ANTHROPIC_API_KEY: KEY, DAILY_CALL_LIMIT: "", SEANCE_DB: fakeD1() } }));
+  const env = { ANTHROPIC_API_KEY: KEY, DAILY_CALL_LIMIT: "1", SEANCE_DB: fakeD1() };
   assert.equal((await onRequest({ request: req(), env })).status, 200);
   await expectResting(await onRequest({ request: req(), env }));
 });
