@@ -5,7 +5,8 @@
   "type": "module",
   "description": "A candlelit Ouija-board séance that summons the spirit of a dead public-domain philosopher to address a personal worry.",
   "scripts": {
-    "test": "node --test"
+    "test": "node --test",
+    "build": "rm -rf dist && mkdir -p dist && cp index.html style.css dist/ && cp -R src dist/src"
   },
   "devDependencies": {
     "fast-check": "^4.11.0",

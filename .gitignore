@@ -15,3 +15,7 @@ Thumbs.db
 *~
 .idea/
 .vscode/
+
+# Build output
+dist/
+.wrangler/

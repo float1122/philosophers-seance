@@ -1,0 +1,10 @@
+# Cloudflare Pages config. Static files are copied to dist/ by `npm run build`.
+name = "philosophers-seance"
+pages_build_output_dir = "dist"
+compatibility_date = "2026-11-01"
+
+[[d1_databases]]
+binding = "SEANCE_DB"
+database_name = "seance-limits"
+database_id = "bc861d1b-c22a-4ca8-9ea7-0db116c5ac15"
+migrations_dir = "migrations"
