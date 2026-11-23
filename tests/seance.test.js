@@ -32,7 +32,7 @@ test("Property 1: invalid DAILY_CALL_LIMIT -> 429 SPIRITS_RESTING, zero calls, c
     fc.asyncProperty(fc.constantFrom(undefined, "", "0", "-1", "abc", "1.5", " "), async (limit) => {
       const store = new InMemoryUsageStore();
       const fetch = okFetch();
-      const handler = createHandler({ env: { ANTHROPIC_API_KEY: KEY, DAILY_CALL_LIMIT: limit }, store, fetch });
+      const handler = createHandler({ env: { ANTHROPIC_API_KEY: KEY, DAILY_CALL_LIMIT: limit }, store, fetch, allowEphemeralStore: true });
       const res = await handler(req());
       assert.equal(res.status, 429);
       assert.deepEqual(await res.json(), { error: "SPIRITS_RESTING" });
@@ -48,7 +48,7 @@ test("Property 1: exhausted limit -> 429, never more than L accepted calls", asy
     fc.asyncProperty(fc.integer({ min: 1, max: 5 }), fc.integer({ min: 0, max: 8 }), async (limit, extra) => {
       const store = new InMemoryUsageStore();
       const fetch = okFetch();
-      const handler = createHandler({ env: { ANTHROPIC_API_KEY: KEY, DAILY_CALL_LIMIT: String(limit) }, store, fetch });
+      const handler = createHandler({ env: { ANTHROPIC_API_KEY: KEY, DAILY_CALL_LIMIT: String(limit) }, store, fetch, allowEphemeralStore: true });
       const statuses = [];
       for (let i = 0; i < limit + extra; i += 1) statuses.push((await handler(req())).status);
       assert.equal(statuses.filter((s) => s === 200).length, limit);
@@ -63,7 +63,7 @@ test("Property 1: exhausted limit -> 429, never more than L accepted calls", asy
 test("Property 2: under limit the count increments by one and is kept when Anthropic fails", async () => {
   const store = new InMemoryUsageStore();
   const fetch = failFetch();
-  const handler = createHandler({ env: { ANTHROPIC_API_KEY: KEY, DAILY_CALL_LIMIT: "3" }, store, fetch });
+  const handler = createHandler({ env: { ANTHROPIC_API_KEY: KEY, DAILY_CALL_LIMIT: "3" }, store, fetch, allowEphemeralStore: true });
   const res = await handler(req());
   assert.equal(res.status, 200);
   const body = await res.json();
@@ -76,7 +76,7 @@ test("Property 9: missing or empty ANTHROPIC_API_KEY -> 503, zero calls, count u
   for (const key of [undefined, ""]) {
     const store = new InMemoryUsageStore();
     const fetch = okFetch();
-    const handler = createHandler({ env: { ANTHROPIC_API_KEY: key, DAILY_CALL_LIMIT: "5" }, store, fetch });
+    const handler = createHandler({ env: { ANTHROPIC_API_KEY: key, DAILY_CALL_LIMIT: "5" }, store, fetch, allowEphemeralStore: true });
     const res = await handler(req());
     assert.equal(res.status, 503);
     assert.deepEqual(await res.json(), { error: "SPIRITS_UNREACHABLE" });
@@ -91,7 +91,7 @@ test("Property 10: valid round trip -> 200 with non-empty answer", async () => {
       fc.constantFrom(...PHILOSOPHER_IDS),
       fc.string({ minLength: 1, maxLength: 80 }).filter((s) => s.replace(/[\u0000-\u001F\u007F]/g, "").trim().length > 0),
       async (id, worry) => {
-        const handler = createHandler({ env: { ANTHROPIC_API_KEY: KEY, DAILY_CALL_LIMIT: "1000" }, store: new InMemoryUsageStore(), fetch: okFetch() });
+        const handler = createHandler({ env: { ANTHROPIC_API_KEY: KEY, DAILY_CALL_LIMIT: "1000" }, store: new InMemoryUsageStore(), fetch: okFetch(), allowEphemeralStore: true });
         const res = await handler(req(id, worry));
         assert.equal(res.status, 200);
         assert.equal((await res.json()).answer, "Breathe, and look again.");
@@ -115,13 +115,11 @@ test("non-POST methods are rejected with 405", async () => {
   assert.equal(res.status, 405);
 });
 
-test("DI seam: any object with the Usage_Store shape can be injected", async () => {
+test("DI seam: any durable object with tryConsume can be injected", async () => {
   const seen = [];
-  const fakeStore = {
-    getCurrentCount: (day) => { seen.push(["get", day]); return 0; },
-    getAndIncrement: (day) => { seen.push(["inc", day]); return 1; },
-  };
+  const fakeStore = { durable: true, tryConsume: async (day, limit) => { seen.push([day, limit]); return true; } };
   const handler = createHandler({ env: { ANTHROPIC_API_KEY: KEY, DAILY_CALL_LIMIT: "1" }, store: fakeStore, fetch: okFetch() });
   assert.equal((await handler(req())).status, 200);
-  assert.deepEqual(seen.map((s) => s[0]), ["get", "inc"]);
+  assert.equal(seen.length, 1);
+  assert.equal(seen[0][1], 1);
 });

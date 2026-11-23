@@ -433,3 +433,14 @@ This section restates the correctness properties as executable property-based te
 - **Performance/robustness**: 1024 max output tokens; 30s client timeout with abort; cancel in-flight on a new summon; graceful degradation returns an in-character answer on any upstream failure.
 - **Maintainability**: the swappable `Usage_Store` is injected via the `createHandler` DI seam; front-end and back-end pure logic are separated from I/O and DOM for property-based testing.
 - **Tone**: all UI and in-character copy is eerie but kind, atmospheric and sparse, numeral-free; the six public-domain thinkers are the full set; personas are authored, not quoted from copyrighted translations; a continuously visible disclaimer frames the séance as imagination, not real contact or professional counsel.
+
+## Revision: durable usage store (security review)
+
+A security review found that the default export used the in-memory store, so each serverless instance (or restart) kept its own count and the daily cap could be bypassed. Changes:
+
+- The `Usage_Store` contract is now `durable: boolean` plus `tryConsume(utcDay, limit, ttlSeconds) -> Promise<boolean>` (count one call if the day is under the limit; the counter expires after `ttlSeconds`).
+- `createHandler` refuses any store that is missing, lacks `tryConsume`, or is not durable, returning `429 SPIRITS_RESTING` before any model call. `InMemoryUsageStore` (non-durable) is accepted only with `allowEphemeralStore: true`, which only `serve.mjs` and the tests pass. A store that throws also fails closed.
+- Hosting is Cloudflare Pages. `api/kv-store.js` implements the store on the `SEANCE_USAGE` KV binding (key `seance:calls:YYYY-MM-DD`, `expirationTtl` of two days). `functions/api/seance.js` is the Pages Function adapter; without the binding every call is refused.
+- Precedence is now 400 -> 429 (invalid limit or no usable store) -> 503 (missing key) -> 429 (cap reached) -> call.
+
+**Known limitation:** KV has no atomic increment, so counting is get -> put. Simultaneous requests can each read the same count and all pass, letting a few calls past the limit; KV's eventual consistency across locations can add to this. The overshoot is bounded by request concurrency, not unbounded, and is accepted for this project. A store with atomic increment (for example a Durable Object) would remove it.

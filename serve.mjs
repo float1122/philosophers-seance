@@ -64,7 +64,8 @@ async function serveStatic(req, res) {
 }
 
 export function startServer({ port = 3000, host = "127.0.0.1", env = process.env } = {}) {
-  const handler = createHandler({ env, store: new InMemoryUsageStore() });
+  // Dev only: an in-memory counter, explicitly allowed for local runs.
+  const handler = createHandler({ env, store: new InMemoryUsageStore(), allowEphemeralStore: true });
   const server = createServer((req, res) => {
     const isApi = new URL(req.url, "http://localhost").pathname === "/api/seance";
     const work = isApi ? serveApi(req, res, handler) : serveStatic(req, res);
