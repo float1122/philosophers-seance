@@ -118,8 +118,9 @@ test("non-POST methods are rejected with 405", async () => {
 test("DI seam: any durable object with tryConsume can be injected", async () => {
   const seen = [];
   const fakeStore = { durable: true, tryConsume: async (day, limit) => { seen.push([day, limit]); return true; } };
-  const handler = createHandler({ env: { ANTHROPIC_API_KEY: KEY, DAILY_CALL_LIMIT: "1" }, store: fakeStore, fetch: okFetch() });
-  assert.equal((await handler(req())).status, 200);
+  const handler = createHandler({ env: { ANTHROPIC_API_KEY: KEY, DAILY_CALL_LIMIT: "1" }, store: fakeStore, ipStore: { durable: true, tryConsume: async () => true }, fetch: okFetch() });
+  const withIp = new Request(req(), { headers: { "content-type": "application/json", "cf-connecting-ip": "203.0.113.7" } });
+  assert.equal((await handler(withIp)).status, 200);
   assert.equal(seen.length, 1);
   assert.equal(seen[0][1], 1);
 });

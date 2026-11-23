@@ -37,12 +37,14 @@ Then open `http://127.0.0.1:3000`. `serve.mjs` is a development server only. Wit
 |---|---|
 | `ANTHROPIC_API_KEY` | Read from the environment only; never committed. |
 | `DAILY_CALL_LIMIT` | Positive integer cap per UTC day. Empty or invalid blocks every call. |
-| `SEANCE_DB` | Cloudflare D1 binding for the daily counter (Pages). Missing binding blocks every call. See `wrangler.toml.example`. |
+| `SEANCE_DB` | Cloudflare D1 binding for the daily and per-IP counters (Pages). Missing binding blocks every call. See `wrangler.toml.example`. |
+| `IP_HASH_SALT` | Secret salt for hashing client IPs (Pages secret). Missing salt blocks every call on Pages. |
 | `PORT` | Local server port (dev only). |
 
 ## Limits
 
 - The daily counter never passes `DAILY_CALL_LIMIT`: D1 checks and increments it atomically in one statement (`INSERT ... ON CONFLICT(day) DO UPDATE SET n = n + 1 WHERE n < ? RETURNING n`), so simultaneous requests cannot both take the last call.
+- Each IP gets at most 30 calls per UTC day, checked before the global cap so one client cannot use it all up. The IP comes from `CF-Connecting-IP` and is stored only as `SHA-256(day:ip:IP_HASH_SALT)` in D1 (`migrations/0002_ip_usage.sql`); other days' rows are deleted on each call, and the count uses the same atomic upsert. A missing header or salt refuses the call; over the cap returns the same `429 SPIRITS_RESTING`. (Added after the Kiro quota ran out, together with Claude, an AI coding assistant.)
 - A spend limit is also set on the Anthropic side, as a second cap independent of this counter.
 
 ## How Kiro was used

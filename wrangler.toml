@@ -8,3 +8,7 @@ binding = "SEANCE_DB"
 database_name = "seance-limits"
 database_id = "bc861d1b-c22a-4ca8-9ea7-0db116c5ac15"
 migrations_dir = "migrations"
+
+# Not secret. IP_HASH_SALT and ANTHROPIC_API_KEY are Pages secrets.
+[vars]
+DAILY_CALL_LIMIT = "2000"

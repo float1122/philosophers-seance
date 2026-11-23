@@ -8,10 +8,11 @@ import { InMemoryUsageStore, DAY_TTL_SECONDS } from "../api/usage-store.js";
 import { fakeD1 } from "./helpers/fake-d1.js";
 
 const KEY = "test-placeholder";
+const SALT = "test-salt-not-secret";
 const req = () =>
   new Request("http://local/api/seance", {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: { "content-type": "application/json", "cf-connecting-ip": "203.0.113.7" },
     body: JSON.stringify({ philosopherId: "seneca", worry: "Will it pass?" }),
   });
 const countingFetch = () => {
@@ -20,6 +21,9 @@ const countingFetch = () => {
   f.count = () => n;
   return f;
 };
+
+// The per-IP cap is tested in ip-limit.test.js; here it always allows.
+const openIpStore = { durable: true, tryConsume: async () => true };
 
 // A fake durable store: atomic check-and-increment with expiry.
 function fakeDurableStore() {
@@ -83,7 +87,7 @@ test("durable store + empty limit -> SPIRITS_RESTING without touching the store"
   for (const limit of [undefined, "", "0", "abc"]) {
     const store = fakeDurableStore();
     const fetch = countingFetch();
-    const h = createHandler({ env: { ANTHROPIC_API_KEY: KEY, DAILY_CALL_LIMIT: limit }, store, fetch });
+    const h = createHandler({ env: { ANTHROPIC_API_KEY: KEY, DAILY_CALL_LIMIT: limit }, store, ipStore: openIpStore, fetch });
     await expectResting(await h(req()));
     assert.equal(store.calls.length, 0);
     assert.equal(fetch.count(), 0);
@@ -95,7 +99,7 @@ test("durable store over the limit -> SPIRITS_RESTING; never more than L model c
     fc.asyncProperty(fc.integer({ min: 1, max: 5 }), fc.integer({ min: 1, max: 6 }), async (limit, extra) => {
       const store = fakeDurableStore();
       const fetch = countingFetch();
-      const h = createHandler({ env: { ANTHROPIC_API_KEY: KEY, DAILY_CALL_LIMIT: String(limit) }, store, fetch });
+      const h = createHandler({ env: { ANTHROPIC_API_KEY: KEY, DAILY_CALL_LIMIT: String(limit) }, store, ipStore: openIpStore, fetch });
       const results = await Promise.all(Array.from({ length: limit + extra }, () => h(req())));
       assert.equal(results.filter((r) => r.status === 200).length, limit);
       assert.equal(results.filter((r) => r.status === 429).length, extra);
@@ -110,6 +114,7 @@ test("durable store receives the UTC day, the limit and an expiry", async () => 
   const h = createHandler({
     env: { ANTHROPIC_API_KEY: KEY, DAILY_CALL_LIMIT: "3" },
     store,
+    ipStore: openIpStore,
     fetch: countingFetch(),
     now: () => new Date("2026-12-01T23:59:00Z"),
   });
@@ -121,7 +126,7 @@ test("durable store receives the UTC day, the limit and an expiry", async () => 
 test("a failing store fails closed", async () => {
   const fetch = countingFetch();
   const store = { durable: true, tryConsume: async () => { throw new Error("store down"); } };
-  const h = createHandler({ env: { ANTHROPIC_API_KEY: KEY, DAILY_CALL_LIMIT: "3" }, store, fetch });
+  const h = createHandler({ env: { ANTHROPIC_API_KEY: KEY, DAILY_CALL_LIMIT: "3" }, store, ipStore: openIpStore, fetch });
   await expectResting(await h(req()));
   assert.equal(fetch.count(), 0);
 });
@@ -139,7 +144,7 @@ test("default export uses the SEANCE_DB D1 binding and enforces the limit", asyn
   let modelCalls = 0;
   globalThis.fetch = async () => { modelCalls += 1; return new Response(JSON.stringify({ content: [{ type: "text", text: "Steady." }] })); };
   t.after(() => { globalThis.fetch = originalFetch; });
-  const env = { ANTHROPIC_API_KEY: KEY, DAILY_CALL_LIMIT: "1", SEANCE_DB: fakeD1() };
+  const env = { ANTHROPIC_API_KEY: KEY, DAILY_CALL_LIMIT: "1", IP_HASH_SALT: SALT, SEANCE_DB: fakeD1() };
   assert.equal((await handler(req(), env)).status, 200);
   await expectResting(await handler(req(), env));
   assert.equal(modelCalls, 1);
@@ -156,8 +161,8 @@ test("Pages Function adapter: empty limit or limit reached -> SPIRITS_RESTING", 
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async () => new Response(JSON.stringify({ content: [{ type: "text", text: "Breathe." }] }));
   t.after(() => { globalThis.fetch = originalFetch; });
-  await expectResting(await onRequest({ request: req(), env: { ANTHROPIC_API_KEY: KEY, DAILY_CALL_LIMIT: "", SEANCE_DB: fakeD1() } }));
-  const env = { ANTHROPIC_API_KEY: KEY, DAILY_CALL_LIMIT: "1", SEANCE_DB: fakeD1() };
+  await expectResting(await onRequest({ request: req(), env: { ANTHROPIC_API_KEY: KEY, DAILY_CALL_LIMIT: "", IP_HASH_SALT: SALT, SEANCE_DB: fakeD1() } }));
+  const env = { ANTHROPIC_API_KEY: KEY, DAILY_CALL_LIMIT: "1", IP_HASH_SALT: SALT, SEANCE_DB: fakeD1() };
   assert.equal((await onRequest({ request: req(), env })).status, 200);
   await expectResting(await onRequest({ request: req(), env }));
 });

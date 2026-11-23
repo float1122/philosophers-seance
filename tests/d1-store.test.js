@@ -9,11 +9,12 @@ import { DAY_TTL_SECONDS } from "../api/usage-store.js";
 import { fakeD1 } from "./helpers/fake-d1.js";
 
 const KEY = "test-placeholder";
+const SALT = "test-salt-not-secret";
 const DAY = "2026-12-01";
 const req = () =>
   new Request("http://local/api/seance", {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: { "content-type": "application/json", "cf-connecting-ip": "203.0.113.7" },
     body: JSON.stringify({ philosopherId: "seneca", worry: "Will it pass?" }),
   });
 
@@ -86,7 +87,7 @@ test("concurrent requests never pass the limit", async () => {
 
 test("concurrent requests through the handler make at most L model calls", async (t) => {
   const modelCalls = stubModel(t);
-  const env = { ANTHROPIC_API_KEY: KEY, DAILY_CALL_LIMIT: "3", SEANCE_DB: fakeD1() };
+  const env = { ANTHROPIC_API_KEY: KEY, DAILY_CALL_LIMIT: "3", IP_HASH_SALT: SALT, SEANCE_DB: fakeD1() };
   const results = await Promise.all(Array.from({ length: 12 }, () => handler(req(), env)));
   assert.equal(results.filter((r) => r.status === 200).length, 3);
   assert.equal(results.filter((r) => r.status === 429).length, 9);
@@ -121,7 +122,7 @@ test("missing D1 binding -> SPIRITS_RESTING, no model call", async (t) => {
 
 test("D1 error -> SPIRITS_RESTING, no model call", async (t) => {
   const modelCalls = stubModel(t);
-  const env = { ANTHROPIC_API_KEY: KEY, DAILY_CALL_LIMIT: "5", SEANCE_DB: fakeD1({ failWith: new Error("D1_ERROR") }) };
+  const env = { ANTHROPIC_API_KEY: KEY, DAILY_CALL_LIMIT: "5", IP_HASH_SALT: SALT, SEANCE_DB: fakeD1({ failWith: new Error("D1_ERROR") }) };
   await expectResting(await handler(req(), env));
   assert.equal(modelCalls(), 0);
 });
@@ -139,7 +140,7 @@ test("empty or invalid limit -> SPIRITS_RESTING without touching D1", async (t) 
 test("Pages Function adapter enforces the limit through SEANCE_DB", async (t) => {
   const modelCalls = stubModel(t);
   const { onRequest } = await import("../functions/api/seance.js");
-  const env = { ANTHROPIC_API_KEY: KEY, DAILY_CALL_LIMIT: "1", SEANCE_DB: fakeD1() };
+  const env = { ANTHROPIC_API_KEY: KEY, DAILY_CALL_LIMIT: "1", IP_HASH_SALT: SALT, SEANCE_DB: fakeD1() };
   assert.equal((await onRequest({ request: req(), env })).status, 200);
   await expectResting(await onRequest({ request: req(), env }));
   assert.equal(modelCalls(), 1);
